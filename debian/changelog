@@ -1,3 +1,9 @@
+dell-recovery (1.56somerville1) bionic; urgency=medium
+
+  * Fix the local repository.
+
+ -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Wed, 07 Mar 2018 18:29:45 +0800
+
 dell-recovery (1.56) bionic; urgency=medium
 
   * Add detection for Wyse systems to force minimal install mode

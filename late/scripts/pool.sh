@@ -36,6 +36,7 @@ if [ ! -f /etc/apt/apt.conf.d/00AllowUnauthenticated ]; then
     cat > /etc/apt/apt.conf.d/00AllowUnauthenticated << EOF
 APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations "true";
+Acquire::AllowInsecureRepositories "true";
 EOF
 fi
 
@@ -62,16 +63,18 @@ if [ ! -f /etc/apt/sources.list.d/dell.list ]; then
         mkdir -p /etc/apt/sources.list.d.old
         mv /etc/apt/sources.list.d/* /etc/apt/sources.list.d.old
     fi
+    TMPDIR="$(mktemp -d)"
     #Produce a dynamic list
     for dir in /cdrom/debs /isodevice/debs;
     do
         if [ -d "$dir" ]; then
             cd $dir
-            apt-ftparchive packages ../../$dir | sed "s/^Filename:\ ..\//Filename:\ .\//" >> /Packages
+            apt-ftparchive packages ../../$dir | sed "s/^Filename:\ ..\//Filename:\ .\/$TMPDIR" >> $TMPDIR/Packages
         fi
     done
-    if [ -f /Packages ]; then
-        echo "deb file:/ /" > /etc/apt/sources.list.d/dell.list
+    if [ -f "$TEMPDIR/Packages" ]; then
+        apt-ftparchive release $TEMPDIR > $TEMPDIR/Release
+        echo "deb file:/ $TEMPDIR" > /etc/apt/sources.list.d/dell.list
     fi
 
     #add the static list to our file
@@ -90,7 +93,7 @@ fi
 if [ "$1" = "cleanup" ]; then
     #cleanup
     mv /etc/apt/sources.list.ubuntu /etc/apt/sources.list
-    rm -f /Packages
+    rm -fr $TEMPDIR
     rm -f /etc/apt/sources.list.d/dell.list
     if [ -d /etc/apt/sources.list.d.old ]; then
         mv /etc/apt/sources.list.d.old/* /etc/apt/sources.list.d
