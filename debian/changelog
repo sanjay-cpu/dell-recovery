@@ -1,4 +1,4 @@
-dell-recovery (1.60) UNRELEASED; urgency=medium
+dell-recovery (1.60~somerville2) bionic; urgency=medium
 
   * Change the order of the kernel parameter options to avoid the propagation
     by accident.
