@@ -1,10 +1,11 @@
-dell-recovery (1.60) UNRELEASED; urgency=medium
+dell-recovery (1.60~somerville4) bionic; urgency=medium
 
   * Change the order of the kernel parameter options to avoid the propagation
     by accident.
   * Reduce some PyGIWarning messages.
   * Use the regional mirror site instead of the global mirror site.
   * Renew .disk/ubuntu_dist_channel for ubuntu-report.
+  * Support the installation on Intel RSTe SATA RAID.
 
  -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Fri, 11 May 2018 18:41:43 +0800
 
