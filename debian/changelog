@@ -1,11 +1,11 @@
-dell-recovery (1.61) UNRELEASED; urgency=medium
+dell-recovery (1.61~somerville1) bionic; urgency=medium
 
   * Fix the installation problem when the volume name of Intel RSTe SATA RAID
     doesn't end with number. (Closes #67)
   * Make sure the path is set properly in the recovery backend.
   * Support mdraid.
 
- -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Tue, 13 Nov 2018 15:46:06 +0800
+ -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Wed, 14 Nov 2018 14:29:27 +0800
 
 dell-recovery (1.60) disco; urgency=medium
 
