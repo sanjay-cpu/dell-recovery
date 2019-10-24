@@ -78,15 +78,11 @@ _Description: WARNING: All personal files and changes will be lost.
 
 Template: ubiquity/text/interactive_recovery
 Type: text
-_Description: Customize installation.
+_Description: Restore only Linux OS partition.
 
 Template: ubiquity/text/interactive_info
 Type: text
-_Description: e.g. Disk encryption, partitions resizing..etc.
-
-Template: ubiquity/text/nonrecovery_warning_label
-Type: text
-_Description: WARNING: No recovery feature included.
+_Description: This option allows you to resize any existing partitions.
 
 Template: ubiquity/text/genuine_bootstrap_warning_label
 Type: text

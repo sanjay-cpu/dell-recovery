@@ -43,7 +43,6 @@ import tarfile
 import gi
 gi.require_version('UDisks', '2.0')
 from gi.repository import GLib, UDisks
-import hashlib
 
 NAME = 'dell-bootstrap'
 BEFORE = 'language'
@@ -364,8 +363,12 @@ class Page(Plugin):
         release = lsb_release.get_distro_information()
 
         #starting with 17.04, we replace the whole swap partition to swap file
-        #use distro policy to determine what to do.
         if float(release["RELEASE"]) >= 17.04:
+            try:
+                self.db.set('partman-swapfile/percentage', '50')
+                self.db.set('partman-swapfile/size', self.mem * 2048)
+            except debconf.DebconfError as err:
+                self.log(str(err))
             return True
 
         if (self.mem >= 32 or self.disk_size <= 64):
@@ -794,23 +797,6 @@ class Page(Plugin):
             self.log("rec_type %s, stage %d, device %s" % (rec_type, self.stage, self.device))
             if (rec_type == 'factory' and self.stage == 2) or rec_type == 'hdd':
                 self.fixup_factory_devices(rec_part)
-            if rec_type == 'hdd':
-                # copy old mok key so that user don't need to enroll it again.
-                rootfs = mount[0:-1] + EFI_OS_PARTITION
-                self.log("old rootfs from %s" % rootfs)
-                try:
-                    misc.execute_root('mount', '-o', 'ro', rootfs, '/mnt')
-                except:
-                    self.log("mouting old rootfs failed, give up old mok.")
-                if os.path.exists('/mnt/var/lib/shim-signed/mok/MOK.priv') and os.path.exists('/mnt/var/lib/shim-signed/mok/MOK.der'):
-                    with misc.raised_privileges():
-                        shutil.copy('/mnt/var/lib/shim-signed/mok/MOK.der', '/tmp')
-                        shutil.copy('/mnt/var/lib/shim-signed/mok/MOK.priv', '/tmp')
-                        with open('/tmp/MOK.der','rb') as f:
-                            self.log("/tmp/MOK.der %s" % hashlib.md5(f.read()).hexdigest())
-                        with open('/tmp/MOK.priv','rb') as f:
-                            self.log("/tmp/MOK.priv %s" % hashlib.md5(f.read()).hexdigest())
-                misc.execute_root('umount', '/mnt')
         except Exception as err:
             self.handle_exception(err)
             self.cancel_handler()
@@ -978,7 +964,7 @@ manually to proceed.")
         commands = [('parted', '-a', 'optimal', '-s', self.device, 'mkpart', 'primary', 'fat16', '0', str(grub_size)),
                     ('parted', '-s', self.device, 'name', '1', "'EFI System Partition'"),
                     ('parted', '-s', self.device, 'set', '1', 'boot', 'on')]
-        if '/dev/nvme' in self.device or '/dev/mmcblk' in self.device or '/dev/mapper/isw' in self.device:
+        if self.device[-1].isnumeric():
             commands.append(('mkfs.msdos', self.device + 'p' + EFI_ESP_PARTITION))
             rp_part = 'p' + EFI_RP_PARTITION
             esp_part = 'p' + EFI_ESP_PARTITION
