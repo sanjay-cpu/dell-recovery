@@ -1,3 +1,13 @@
+dell-recovery (1.61~somerville4) bionic; urgency=medium
+
+  [Alex Tu]
+  * Refine the wording of the entry of full disk encryption during installation
+
+  [ Mario Limonciello ]
+  * Update VCS URL for bionic
+
+ -- Alex Tu <alex.tu@canonical.com>  Mon, 11 Nov 2019 16:52:01 +0800
+
 dell-recovery (1.61~somerville3) bionic; urgency=medium
 
   [ Shih-Yuan Lee (FourDollars) ]
