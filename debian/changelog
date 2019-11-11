@@ -1,3 +1,9 @@
+dell-recovery (1.61~somerville5) bionic; urgency=medium
+
+  * bump version.
+
+ -- Alex Tu <alex.tu@canonical.com>  Mon, 11 Nov 2019 17:29:10 +0800
+
 dell-recovery (1.61~somerville4) bionic; urgency=medium
 
   [Alex Tu]
