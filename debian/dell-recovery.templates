@@ -3,16 +3,6 @@ Type: boolean
 Default: false
 Description: for internal use; determines if wyse mode is on.
 
-Template: dell-recovery/dual_boot
-Type: boolean
-Default: false
-Description: for internal use; determines if EFI enabled dual boot enabled
-
-Template: dell-recovery/os_partition
-Type: string
-Default: 
-Description: for internal use; determines the label of the OS partition to remove
-
 Template: dell-recovery/destination
 Type: string
 Default: none
@@ -21,7 +11,7 @@ Description: for internal use; determines whether to generate recovery media
 Template: dell-recovery/recovery_type
 Type: string
 Default: dynamic
-Description: for internal use;determines whether to offer the bootstrap 
+Description: for internal use;determines whether to offer the bootstrap
  ubiquity plugin to the user. valid: [dynamic, factory, usb, dvd]
 
 Template: dell-recovery/build_start

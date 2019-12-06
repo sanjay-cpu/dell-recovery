@@ -70,12 +70,6 @@ if [ "$BOOTDEV" = "$TARGETDEV" ]; then
     fi
 
     fistlog="/tmp/fist.log"
-    if [ -f $RP/SDR ]; then
-        dualos=`sed -n '/DUALOS/=' $RP/SDR`
-        if [ $dualos ]; then
-            fistlog="/tmp/DUALOS_FIST.LOG"
-        fi
-    fi
 
     IFHALT "Clean up FI Env..."
     rm -rf $RP/scripts/chroot-scripts/os-post/95-set_UTC_TZ.sh

@@ -49,13 +49,6 @@ if [ "$BOOTDEV" = "$TARGETDEV" ]; then
     mount -o remount,rw $RP
     fistlog="/tmp/fist.err"
 
-    if [ -f $RP/SDR ]; then
-        dualos=`sed -n '/DUALOS/=' $RP/SDR`
-        if [ $dualos ]; then
-            fistlog="/tmp/DUALOS_FIST.ERR"
-        fi
-    fi
-
     IFHALT "Resetting grub fail state"
     [ -s $RP/factory/grubenv ] || rm -f $RP/factory/grubenv
     grub-editenv $RP/factory/grubenv set recordfail=1

@@ -109,11 +109,6 @@ done
 # Now load all the defaults included in all installs
 casper-set-selections "/root/usr/share/dell/casper/seeds/ubuntu.seed"
 
-# If we have a dual boot option, load the dual boot preseed
-if db_get dell-recovery/dual_boot && [ "$RET" = true ]; then
-    casper-set-selections "/root/usr/share/dell/casper/seeds/dual.seed"
-fi
-
 # Lastly, reload the override / configurations preseeds so that it is allowed to override stuff from ubuntu.seed and dual.seed
 for seed in dell-recovery gfx wlan; do
     if [ -e /root/cdrom/preseed/$seed.seed ]; then

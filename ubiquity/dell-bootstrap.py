@@ -364,15 +364,6 @@ class Page(Plugin):
         #on small disks or big mem, don't look for extended or delete swap.
         os_part = EFI_OS_PARTITION
 
-        # check dual boot or not
-        try:
-            if self.db.get('dell-recovery/dual_boot') == 'true':
-           ##dual boot get the partition number of OS and swap
-                os_label = self.db.get('dell-recovery/os_partition')
-                os_part = self.dual_partition_num(os_label)
-        except debconf.DebconfError as err:
-            self.log(str(err))
-
         #remove extras
         if os_part.isdigit():
                 remove = misc.execute_root('parted', '-s', self.device, 'rm', os_part)
@@ -382,21 +373,6 @@ class Page(Plugin):
                 if refresh is False:
                     self.log("Error updating partition %s for kernel device %s (this may be normal)'" % (os_part, self.device))
 
-    def dual_partition_num(self,label):
-       #remove UBUNTU patition for dual boot
-       ##OS num
-        os_part = ''
-        digits = re.compile('\d+')
-        try:
-            os_path = magic.fetch_output(['readlink','/dev/disk/by-label/'+label]).split('\n')
-        except Exception as err:
-            # compatible with DUALSYS partition label when boot from hdd
-            os_path = magic.fetch_output(['readlink','/dev/disk/by-label/UBUNTU']).split('\n')
-            if not os_path:
-                self.log('os_path command is executed failed, the error is %s'%str(err))
-        os_part = digits.search(os_path[0].split('/')[-1]).group()
-
-        return os_part
 
     def explode_sdr(self):
         '''Explodes all content explicitly defined in an SDR
