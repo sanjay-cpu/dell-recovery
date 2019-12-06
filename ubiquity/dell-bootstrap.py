@@ -54,10 +54,12 @@ OEM = False
 EFI_ESP_PARTITION       =     '1'
 EFI_RP_PARTITION        =     '2'
 EFI_OS_PARTITION        =     '3'
-EFI_SWAP_PARTITION      =     '4'
+EFI_BOOT_PARTITION      =     '4'
 
 #Continually Reused ubiquity templates
-RECOVERY_TYPE_QUESTION =  'dell-recovery/recovery_type'
+RECOVERY_TYPE_QUESTION  =  'dell-recovery/recovery_type'
+ENCRYPTION_QUESTION     =  'dell-recovery/encryption'
+SKIP_PARTITION_QUESTION =  'ubiquity/skip_partitioning'
 
 no_options = GLib.Variant('a{sv}', {})
 
@@ -69,6 +71,9 @@ class PageNoninteractive(PluginUI):
     def __init__(self, controller, *args, **kwargs):
         self.controller = controller
         PluginUI.__init__(self, controller, *args, **kwargs)
+
+    def get_encryption(self):
+        return False
 
     def get_type(self):
         '''For the noninteractive frontend, get_type always returns an empty str
@@ -137,6 +142,9 @@ class PageGtk(PluginUI):
             self.restart_box = builder.get_object('restart_box')
             self.err_dialog = builder.get_object('err_dialog')
             self.log_dialog = builder.get_object('log_dialog')
+            self.encryption = builder.get_object('encrypt_checkbox')
+            self.encryption_box = builder.get_object('encryption_box')
+            self.encyption_supported = self.check_encryption_supported()
 
             #advanced page widgets
             icon = builder.get_object('dell_image')
@@ -150,10 +158,29 @@ class PageGtk(PluginUI):
                 builder.get_object('error_box').show()
             PluginUI.__init__(self, controller, *args, **kwargs)
 
+    def check_encryption_supported(self):
+        #no TPM on the machine
+        if not os.path.exists('/dev/tpm0'):
+            return False
+        import apt.cache
+        cache = apt.cache.Cache()
+        #check what's in the apt cache (or installed)
+        try:
+            clevis_version = cache['clevis-tpm2'].versions[0].version
+            if clevis_version < '12':
+                return False
+            tpm2_tools_version = cache['tpm2-tools'].versions[0].version
+            if tpm2_tools_version < '4':
+                return False
+        except KeyError:
+            return False
+        return True
+
     def plugin_get_current_page(self):
         """Called when ubiquity tries to realize this page.
            * Disable the progress bar
            * Check whether we are on genuine hardware
+           * Determine whether to offer encryption
         """
         #are we real?
         if not (self.genuine and 'UBIQUITY_AUTOMATIC' in os.environ):
@@ -161,7 +188,10 @@ class PageGtk(PluginUI):
             self.automated_recovery_box.hide()
             self.automated_recovery.set_sensitive(False)
             self.interactive_recovery.set_sensitive(False)
+            self.encryption_box.hide()
             self.controller.allow_go_forward(False)
+        if not self.encyption_supported:
+            self.encryption_box.hide()
         self.toggle_progress()
 
         return self.plugin_widgets
@@ -171,6 +201,9 @@ class PageGtk(PluginUI):
         if 'UBIQUITY_AUTOMATIC' in os.environ and \
                             hasattr(self.controller, 'toggle_progress_section'):
             self.controller.toggle_progress_section()
+
+    def get_encryption(self):
+        return self.encryption.get_active()
 
     def get_type(self):
         """Returns the type of recovery to do from GUI"""
@@ -191,6 +224,10 @@ class PageGtk(PluginUI):
             size = model.get_value(iterator, 1)
         return (device, size)
 
+    def set_encryption(self, value):
+        if self.encyption_supported:
+            self.encryption.set_active(value)
+
     def set_type(self, value, stage):
         """Sets the type of recovery to do in GUI"""
         if not self.genuine:
@@ -199,8 +236,11 @@ class PageGtk(PluginUI):
 
         if value == "automatic":
             self.automated_recovery.set_active(True)
+            self.encryption.set_sensitive(True)
         elif value == "interactive":
             self.interactive_recovery.set_active(True)
+            self.encryption.set_active(False)
+            self.encryption.set_sensitive(False)
         elif value == "factory":
             if stage == 2:
                 self.plugin_widgets.hide()
@@ -212,11 +252,17 @@ class PageGtk(PluginUI):
                 self.automated_recovery_box.hide()
                 self.interactive_recovery.set_sensitive(False)
                 self.automated_recovery.set_sensitive(False)
+                self.encryption.set_sensitive(True)
 
     def toggle_type(self, widget):
         """Allows the user to go forward after they've made a selection'"""
         self.controller.allow_go_forward(True)
-        self.automated_combobox.set_sensitive(self.automated_recovery.get_active())
+        automated = self.automated_recovery.get_active()
+        hdd = self.hdd_recovery.get_active()
+        self.automated_combobox.set_sensitive(automated)
+        if self.encryption.get_active() and (automated or hdd):
+            self.encryption.set_active(False)
+        self.encryption_box.set_sensitive(automated or hdd)
 
     def show_dialog(self, which, data = None):
         """Shows a dialog"""
@@ -226,12 +272,14 @@ class PageGtk(PluginUI):
             self.controller.allow_go_forward(False)
             self.automated_recovery_box.hide()
             self.interactive_recovery_box.hide()
+            self.encryption_box.hide()
             self.info_box.show_all()
             self.info_spinner.start()
             self.toggle_progress()
         elif which == "forward":
             self.automated_recovery_box.hide()
             self.interactive_recovery_box.hide()
+            self.encryption.hide()
             self.toggle_progress()
         else:
             self.info_spinner.stop()
@@ -360,19 +408,29 @@ class Page(Plugin):
 
     def remove_extra_partitions(self):
         """Removes partitions we are installing on for the process to start"""
-        #check for small disks.
-        #on small disks or big mem, don't look for extended or delete swap.
-        os_part = EFI_OS_PARTITION
-
-        #remove extras
-        if os_part.isdigit():
-                remove = misc.execute_root('parted', '-s', self.device, 'rm', os_part)
+        dmsetup = misc.execute_root('dmsetup', 'remove_all')
+        if dmsetup is False:
+            self.log("Error calling dmsetup")
+        for part in [EFI_OS_PARTITION, EFI_BOOT_PARTITION]:
+                remove = misc.execute_root('parted', '-s', self.device, 'rm', part)
                 if remove is False:
-                    self.log("Error removing partition number: %s on %s (this may be normal)'" % (os_part, self.device))
-                refresh = misc.execute_root('partx', '-d', '--nr', os_part, self.device)
+                    self.log("Error removing partition number: %s on %s (this may be normal)'" % (part, self.device))
+                refresh = misc.execute_root('partx', '-d', '--nr', part, self.device)
                 if refresh is False:
-                    self.log("Error updating partition %s for kernel device %s (this may be normal)'" % (os_part, self.device))
+                    self.log("Error updating partition %s for kernel device %s (this may be normal)'" % (part, self.device))
 
+    def simple_partitioner(self):
+        """Runs all partitioning stuff for dell recovery"""
+        if self.device[-1].isnumeric():
+            esp_part = 'p' + EFI_ESP_PARTITION
+            os_part = 'p' + EFI_OS_PARTITION
+        else:
+            esp_part = EFI_ESP_PARTITION
+            os_part = EFI_OS_PARTITION
+        result = misc.execute_root("/usr/share/dell/scripts/simple_partitioner.sh",
+                                   self.device, esp_part, os_part)
+        if result is False:
+            raise RuntimeError("Error running partitioner")
 
     def explode_sdr(self):
         '''Explodes all content explicitly defined in an SDR
@@ -613,6 +671,17 @@ class Page(Plugin):
         self.log("Detected device we are operating on is %s" % self.device)
         self.log("Detected a %s filesystem on the %s recovery partition" % (rec_part["fs"], rec_part["label"]))
 
+    def get_default_encryption_policy(self):
+        #whether to use encryption or not
+        try:
+            if self.db.get(ENCRYPTION_QUESTION) == 'true':
+                encryption = True
+            else:
+                encryption = False
+        except debconf.DebconfError:
+                encryption = False
+        return encryption
+
     def prepare(self, unfiltered=False):
         """Prepare the Debconf portion of the plugin and gather all data"""
         #version
@@ -695,6 +764,8 @@ class Page(Plugin):
                         break
         self.mem = round(self.mem/1048575) #in GB
 
+        encryption = self.get_default_encryption_policy()
+
         #Fill in UI data
         twiddle = {"mount": mount,
                    "version": version,
@@ -704,6 +775,7 @@ class Page(Plugin):
         for twaddle in reversed(sorted(twiddle)):
             self.ui.set_advanced(twaddle, twiddle[twaddle])
         self.ui.set_type(rec_type, self.stage)
+        self.ui.set_encryption(encryption)
 
         #Make sure some locale was set so we can guarantee automatic mode
         try:
@@ -770,6 +842,15 @@ class Page(Plugin):
         if size:
             self.device_size = size
         self.log("selected device %s %d" % (device, size))
+        if self.ui.get_encryption():
+            encryption = "true"
+        else:
+            encryption = "false"
+        self.preseed(SKIP_PARTITION_QUESTION, encryption)
+        self.preseed_config += SKIP_PARTITION_QUESTION + "=" + encryption + " "
+        self.preseed_config += ENCRYPTION_QUESTION + "=" + encryption + " "
+        self.preseed(ENCRYPTION_QUESTION, encryption)
+        self.log("enabled encryption: %s" % encryption)
 
         return Plugin.ok_handler(self)
 
@@ -828,16 +909,22 @@ class Page(Plugin):
             else:
                 if 'dell-recovery/recovery_type=hdd' in open('/proc/cmdline', 'r').read().split():
                     self.ui.toggle_progress()
+                if self.db.get(ENCRYPTION_QUESTION) == 'true':
+                    encryption = True
+                else:
+                    encryption = False
                 self.sleep_network()
                 self.delete_swap()
                 self.remove_extra_partitions()
+                if encryption:
+                    self.simple_partitioner()
                 self.explode_sdr()
         except Exception as err:
             #For interactive types of installs show an error then reboot
             #Otherwise, just reboot the system
-            if rec_type == "automatic" or rec_type == "interactive" or \
-               ('UBIQUITY_DEBUG' in os.environ and 'UBIQUITY_ONLY' in os.environ):
-                self.handle_exception(err)
+#            if rec_type == "automatic" or rec_type == "interactive" or \
+#               ('UBIQUITY_DEBUG' in os.environ and 'UBIQUITY_ONLY' in os.environ):
+            self.handle_exception(err)
             self.cancel_handler()
 
         #translate languages
@@ -1267,6 +1354,17 @@ class Install(InstallPlugin):
         if destination and not os.path.exists(fname):
             with open(fname, 'w') as wfd:
                 wfd.write('WARRANTY=%s\n' % destination)
+
+        #for turning on FDE
+        try:
+            encryption = progress.get(ENCRYPTION_QUESTION)
+        except debconf.DebconfError:
+            encryption = ''
+        fname = os.path.join(self.target, 'etc', 'default', 'dell-recovery')
+        if encryption and not os.path.exists(fname):
+            to_install += ['clevis-tpm2', 'clevis-systemd', 'tpm2-tools']
+            with open(fname, 'w') as wfd:
+                wfd.write('ENCRYPTION=%s\n' % encryption)
 
         #mark all upgrades and unconditional installs
         to_install += magic.mark_packages(rec_part)

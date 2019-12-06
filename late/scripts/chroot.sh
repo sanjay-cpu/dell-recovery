@@ -164,8 +164,7 @@ fi
 #check the checked_uninstalled file is empty or not, we will turn to FAIL-SCRIPT if it is not empty
 [ ! -s "$TARGET/var/lib/ubiquity/dell_uninstalled" ]
 
-
 # reset traps, as we are now exiting normally
 trap - TERM INT HUP EXIT QUIT
 
-. /usr/share/dell/scripts/SUCCESS-SCRIPT $BOOT_DEV $BOOT_PART_NUM
+. /usr/share/dell/scripts/SUCCESS-SCRIPT

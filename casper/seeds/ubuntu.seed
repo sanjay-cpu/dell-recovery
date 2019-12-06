@@ -87,7 +87,7 @@
        method{ efi }                   \
        format{ } .                     \
                                        \
-       500 10000 4000000 ext4          \
+       500 10000 -1 ext4               \
        $primary{ }                     \
        method{ format }                \
        format{ }                       \

@@ -70,6 +70,14 @@ elif [ "$1" = "late" ]; then
     done
     #if this was installed to work around secure boot, clean it up
     rm -f /boot/efi/EFI/ubuntu/MokSBStateSet.efi
+
+    #Update encryption policy to match secure boot status
+    if [ -f /etc/default/dell-recovery ]; then
+        . /etc/default/dell-recovery
+    fi
+    if [ "$ENCRYPTION" = "true" ]; then
+        /usr/share/dell/scripts/update_tpm_policy.sh -d /dev/dell_lvm/rootfs
+    fi
 else
     echo "Unknown arguments $1 $2"
 fi
