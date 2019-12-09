@@ -560,17 +560,20 @@ def create_new_uuid(old_initrd_directory, old_casper_directory,
             continue
         chain0 = subprocess.Popen(['find'], cwd=root,
                                 stdout=subprocess.PIPE)
-        chain1 = subprocess.Popen(['cpio', '--quiet', '-o', '-H', 'newc'],
-                                cwd=root, stdin=chain0.stdout,
+        chain1 = subprocess.Popen(['sort'], cwd=root,
+                                stdin=chain0.stdout,
+                                stdout=subprocess.PIPE)
+        chain2 = subprocess.Popen(['cpio', '-R', '0:0', '--reproducible', '--quiet', '-o', '-H', 'newc'],
+                                cwd=root, stdin=chain1.stdout,
                                 stdout=subprocess.PIPE)
         with open(new_initrd_file, 'ab') as initrd_fd:
             if component == 'main':
-                chain2 = subprocess.Popen(compress_command,
-                                        stdin=chain1.stdout,
-                                        stdout=subprocess.PIPE)
-                initrd_fd.write(chain2.communicate()[0])
+                chain3 = subprocess.Popen(compress_command,
+                                          stdin=chain2.stdout,
+                                          stdout=subprocess.PIPE)
+                initrd_fd.write(chain3.communicate()[0])
             else:
-                initrd_fd.write(chain1.communicate()[0])
+                initrd_fd.write(chain2.communicate()[0])
 
     walk_cleanup(tmpdir)
 
