@@ -34,7 +34,8 @@ Depends: ${python3:Depends},
          uuid-runtime,
 Replaces: dell-artwork, dell-oobe
 Conflicts: dell-oobe
-Recommends: cryptsetup,
+Recommends: clevis-tpm2,
+            cryptsetup,
             cryptsetup-bin,
             dvd+rw-tools,
             isolinux,
