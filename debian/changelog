@@ -1,3 +1,9 @@
+dell-recovery (1.61~somerville7) bionic; urgency=medium
+
+  * cherry-pick d6df7bed2ddc0793a19cb728d486cc24317059b0 (LP: #1868547)
+
+ -- Kai-Chuan Hsieh <kaichuan.hsieh@canonical.com>  Tue, 24 Mar 2020 12:46:08 +0800
+
 dell-recovery (1.61~somerville6) bionic; urgency=medium
 
   [ Mario Limonciello ]
