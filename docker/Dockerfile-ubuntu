@@ -1,6 +1,5 @@
 FROM ubuntu:eoan
 
-RUN apt-get update
 RUN apt-get update -qq
 RUN apt-get install -yq --no-install-recommends \
 	build-essential \
@@ -12,7 +11,7 @@ RUN apt-get install -yq --no-install-recommends \
 	po-debconf \
 	pyflakes3 \
 	lsb-release \
-	gnu-efi
+
 RUN mkdir -p /build/dell-recovery
 WORKDIR /build/dell-recovery
 
